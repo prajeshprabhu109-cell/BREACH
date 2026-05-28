@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <title>QUANTUM BREACH</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' fill='%23010508'/><polygon points='16,4 28,28 4,28' fill='none' stroke='%2300c8ff' stroke-width='2'/></svg>">
 <!-- Real CrazyGames SDK — loaded first so init() can be awaited in boot() -->
 <script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 <style>
@@ -34,7 +35,7 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
   background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,200,255,0.025) 3px,rgba(0,200,255,0.025) 4px);}
 
 /* CANVAS LAYER */
-#c{position:fixed;inset:0;display:block;width:100%;height:100%;}
+#c{position:fixed;inset:0;display:block;width:100%;height:100%;image-rendering:crisp-edges;image-rendering:-webkit-optimize-contrast;}
 
 /* BOOT */
 #boot{position:fixed;inset:0;z-index:8000;background:var(--void);
@@ -333,6 +334,13 @@ const AUDIO = {
   },
 
   _getCtx() {
+    // Never create AudioContext here — only return it if already created by start().
+    // Creating it before a user gesture triggers the browser autoplay policy warning.
+    return this._ctx || null;
+  },
+
+  _createCtx() {
+    // Only called inside start(), which is always triggered by a real user gesture.
     if (!this._ctx) {
       try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
     }
@@ -340,12 +348,13 @@ const AUDIO = {
   },
 
   start() {
+    // Called on every click/keydown — create & resume context on each gesture
+    // so the browser is always satisfied before we try to play sound.
+    const ac = this._createCtx();
+    if (ac && ac.state === 'suspended') ac.resume();
     if (this._started) return;
     this._started = true;
     this._music.play().catch(() => {});
-    // Resume AudioContext after gesture
-    const ac = this._getCtx();
-    if (ac && ac.state === 'suspended') ac.resume();
   },
 
   toggleMute() {
@@ -538,8 +547,14 @@ const ctx    = canvas.getContext('2d');
 let W, H, CX, CY;
 
 function resize() {
-  W = canvas.width  = window.innerWidth;
-  H = canvas.height = window.innerHeight;
+  const dpr = window.devicePixelRatio || 1;
+  W = window.innerWidth;
+  H = window.innerHeight;
+  // Scale the canvas BITMAP by DPR so it matches physical pixels.
+  // All game logic still uses W/H (logical pixels) — nothing else changes.
+  canvas.width  = Math.round(W * dpr);
+  canvas.height = Math.round(H * dpr);
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);  // scale ctx to match logical coords
   CX = W / 2; CY = H / 2;
   if (typeof G !== 'undefined' && G.running) G.cam.y = CY;
 }
@@ -983,7 +998,21 @@ function updateGame() {
     // Check pass-through
     if (!gate.passed && gate.y > G.playerY - gate.height / 2 && gate.y < G.playerY + gate.height / 2) {
       const px = G.playerX;
-      const inGap = px > gate.gapX - gate.gapW / 2 && px < gate.gapX + gate.gapW / 2;
+
+      // Gates are drawn rotated around (CX, gate.y).
+      // Un-rotate the player position into the gate's local space so
+      // the gap comparison is accurate regardless of rotation angle.
+      // Without this fix, all 3 colors (blue/orange/green) can falsely
+      // trigger handleDeath because the raw px vs gapX comparison is
+      // wrong whenever rotation != 0 (which is always, since rotSpeed
+      // is set on every gate at spawn).
+      const dx = px - CX;
+      const dy = G.playerY - gate.y;
+      const cos = Math.cos(-gate.rotation);
+      const sin = Math.sin(-gate.rotation);
+      const localX = CX + (dx * cos - dy * sin);
+      const inGap = localX > gate.gapX - gate.gapW / 2 &&
+                    localX < gate.gapX + gate.gapW / 2;
 
       if (inGap) {
         if (gate.stateIdx === G.playerState) {
@@ -998,8 +1027,9 @@ function updateGame() {
           AUDIO.sfxPass();
 
           // Near-miss bonus: how close to wall edges?
-          const distToLeft  = (px) - (gate.gapX - gate.gapW / 2);
-          const distToRight = (gate.gapX + gate.gapW / 2) - (px);
+          // Use localX (rotation-corrected) so near-miss is accurate too.
+          const distToLeft  = localX - (gate.gapX - gate.gapW / 2);
+          const distToRight = (gate.gapX + gate.gapW / 2) - localX;
           const nearMiss = Math.min(distToLeft, distToRight);
           const nearThreshold = gate.gapW * 0.25;
           if (nearMiss < nearThreshold) {
