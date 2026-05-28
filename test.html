@@ -175,12 +175,15 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
   backdrop-filter:blur(4px);transition:all .2s;}
 #mute-btn:hover{border-color:var(--blue);background:var(--blue-g);}
 #mute-btn svg{width:18px;height:18px;pointer-events:none;}
-#fs-btn{position:fixed;top:12px;right:58px;z-index:6600;width:36px;height:36px;
-  border-radius:4px;border:1px solid rgba(0,200,255,.28);background:rgba(1,5,8,.7);
+#fs-btn{position:fixed;top:12px;right:58px;z-index:6600;width:40px;height:40px;
+  border-radius:4px;border:1px solid rgba(0,200,255,.45);background:rgba(1,5,8,.82);
   color:var(--blue);cursor:pointer;display:flex;align-items:center;justify-content:center;
-  backdrop-filter:blur(4px);transition:all .2s;}
-#fs-btn:hover{border-color:var(--blue);background:var(--blue-g);}
-#fs-btn svg{width:18px;height:18px;pointer-events:none;}
+  backdrop-filter:blur(6px);transition:all .22s;
+  box-shadow:0 0 10px rgba(0,200,255,.15),inset 0 0 8px rgba(0,200,255,.06);}
+#fs-btn:hover{border-color:var(--blue);background:var(--blue-g);
+  box-shadow:0 0 22px rgba(0,200,255,.45),inset 0 0 12px rgba(0,200,255,.12);}
+#fs-btn:active{transform:scale(.93);}
+#fs-btn svg{width:22px;height:22px;pointer-events:none;filter:drop-shadow(0 0 4px var(--blue));}
 
 /* LEADERBOARD row */
 .lb-row{display:flex;gap:10px;align-items:center;padding:5px 0;
@@ -297,17 +300,27 @@ body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
 
 <!-- ═══════════ FULLSCREEN BUTTON ═══════════ -->
 <button id="fs-btn" title="Toggle Fullscreen" onclick="QB.toggleFullscreen()">
-  <svg id="fs-icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="15,3 21,3 21,9"/>
-    <polyline points="9,21 3,21 3,15"/>
-    <line x1="21" y1="3" x2="14" y2="10"/>
-    <line x1="3" y1="21" x2="10" y2="14"/>
+  <!-- ENTER fullscreen: four outward corner brackets -->
+  <svg id="fs-icon-enter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter">
+    <!-- top-left -->
+    <polyline points="3,8 3,3 8,3"/>
+    <!-- top-right -->
+    <polyline points="16,3 21,3 21,8"/>
+    <!-- bottom-left -->
+    <polyline points="3,16 3,21 8,21"/>
+    <!-- bottom-right -->
+    <polyline points="16,21 21,21 21,16"/>
   </svg>
-  <svg id="fs-icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
-    <polyline points="4,14 10,14 10,20"/>
-    <polyline points="20,10 14,10 14,4"/>
-    <line x1="10" y1="14" x2="3" y2="21"/>
-    <line x1="21" y1="3" x2="14" y2="10"/>
+  <!-- EXIT fullscreen: four inward corner brackets -->
+  <svg id="fs-icon-exit" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" style="display:none;">
+    <!-- top-left inward -->
+    <polyline points="8,3 8,8 3,8"/>
+    <!-- top-right inward -->
+    <polyline points="16,3 16,8 21,8"/>
+    <!-- bottom-left inward -->
+    <polyline points="8,21 8,16 3,16"/>
+    <!-- bottom-right inward -->
+    <polyline points="16,21 16,16 21,16"/>
   </svg>
 </button>
 
