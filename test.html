@@ -1386,7 +1386,7 @@ async function boot() {
 
 // ── SITELOCK ──────────────────────────────────────────────────────
 (function() {
-  const allowed = ['localhost','127.0.0.1','crazygames.com',''];
+  const allowed = ['localhost','127.0.0.1','crazygames.com','github.io','github.com'];
   const host = window.location.hostname;
   if (!allowed.some(a => host === a || host.endsWith('.'+a))) {
     document.body.style.filter = 'blur(12px) brightness(.4)';
