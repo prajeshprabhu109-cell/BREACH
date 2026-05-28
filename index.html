@@ -1,0 +1,1370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
+<title>QUANTUM BREACH</title>
+<!-- Real CrazyGames SDK — loaded first so init() can be awaited in boot() -->
+<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap');
+
+:root {
+  --void:     #010508;
+  --blue:     #00c8ff;
+  --orange:   #ff7200;
+  --green:    #00ff88;
+  --blue-g:   rgba(0,200,255,0.18);
+  --orange-g: rgba(255,114,0,0.20);
+  --green-g:  rgba(0,255,136,0.16);
+  --red:      #ff2244;
+  --gold:     #ffd700;
+  --panel:    rgba(2,12,24,0.94);
+  --border:   rgba(0,200,255,0.14);
+  --text:     #b8dff0;
+  --muted:    #3a6a88;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--void);
+  font-family:'Rajdhani',sans-serif;color:var(--text);touch-action:none;}
+
+/* SCANLINES */
+body::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:9000;
+  background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(0,200,255,0.025) 3px,rgba(0,200,255,0.025) 4px);}
+
+/* CANVAS LAYER */
+#c{position:fixed;inset:0;display:block;width:100%;height:100%;}
+
+/* BOOT */
+#boot{position:fixed;inset:0;z-index:8000;background:var(--void);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;transition:opacity .5s;}
+#boot.out{opacity:0;pointer-events:none;}
+.boot-logo{font-family:'Orbitron',monospace;font-size:clamp(22px,5vw,52px);font-weight:900;
+  color:var(--blue);letter-spacing:.3em;text-shadow:0 0 40px var(--blue),0 0 80px rgba(0,200,255,.4);text-align:center;}
+.boot-tagline{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.4em;}
+.boot-bar-shell{width:min(360px,75vw);height:2px;background:rgba(0,200,255,.1);}
+.boot-bar-fill{height:100%;width:0;background:var(--blue);box-shadow:0 0 12px var(--blue);transition:width .12s linear;}
+.boot-line{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.15em;text-align:center;min-height:16px;}
+
+/* OVERLAY SCREENS */
+.screen{position:fixed;inset:0;z-index:7000;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:1.2rem;opacity:0;pointer-events:none;transition:opacity .35s;}
+.screen.show{opacity:1;pointer-events:all;}
+.screen-bg{position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(0,10,22,.97) 0%,rgba(1,5,8,.99) 100%);}
+
+.s-title{font-family:'Orbitron',monospace;font-weight:900;font-size:clamp(28px,6vw,64px);
+  letter-spacing:.25em;position:relative;z-index:1;}
+.s-sub{font-family:'Share Tech Mono',monospace;font-size:12px;color:var(--muted);letter-spacing:.3em;position:relative;z-index:1;}
+
+/* BUTTONS */
+.btn{position:relative;z-index:1;font-family:'Orbitron',monospace;font-size:11px;
+  letter-spacing:.25em;padding:12px 32px;border:1px solid;border-radius:2px;
+  cursor:pointer;background:transparent;transition:all .2s;text-transform:uppercase;}
+.btn-blue{color:var(--blue);border-color:var(--blue);}
+.btn-blue:hover{background:var(--blue-g);box-shadow:0 0 24px var(--blue-g);}
+.btn-orange{color:var(--orange);border-color:var(--orange);}
+.btn-orange:hover{background:var(--orange-g);box-shadow:0 0 24px var(--orange-g);}
+.btn-green{color:var(--green);border-color:var(--green);}
+.btn-green:hover{background:var(--green-g);box-shadow:0 0 24px var(--green-g);}
+.btn-gold{color:var(--gold);border-color:var(--gold);}
+.btn-gold:hover{background:rgba(255,215,0,.12);box-shadow:0 0 24px rgba(255,215,0,.2);}
+.btn-ghost{color:var(--muted);border-color:var(--muted);font-size:10px;padding:8px 20px;}
+.btn-ghost:hover{color:var(--text);border-color:var(--text);}
+
+/* HUD */
+#hud{position:fixed;inset:0;z-index:6000;pointer-events:none;}
+#hud-top{position:absolute;top:0;left:0;right:0;height:52px;
+  display:flex;align-items:center;justify-content:space-between;padding:0 20px;
+  background:linear-gradient(to bottom,rgba(1,5,8,.9),transparent);}
+#hud-score{font-family:'Orbitron',monospace;font-size:clamp(18px,4vw,32px);font-weight:700;color:#fff;}
+#hud-multi{font-family:'Orbitron',monospace;font-size:14px;color:var(--gold);letter-spacing:.2em;}
+#hud-streak{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.2em;}
+#hud-right{text-align:right;}
+#hud-speed-label{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:.2em;}
+#hud-speed{font-family:'Orbitron',monospace;font-size:14px;color:var(--blue);}
+#hud-influence{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--gold);}
+
+/* Near-Miss slipstream bar */
+#slip-bar-wrap{position:absolute;top:54px;left:50%;transform:translateX(-50%);
+  width:min(260px,55vw);height:3px;background:rgba(255,114,0,.1);border-radius:2px;}
+#slip-bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--orange),var(--gold));
+  border-radius:2px;box-shadow:0 0 10px var(--orange);transition:width .1s;}
+#slip-label{position:absolute;top:4px;left:50%;transform:translateX(-50%);
+  font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--orange);letter-spacing:.2em;
+  white-space:nowrap;opacity:0;transition:opacity .2s;}
+
+/* Fragment counter */
+#frag-counter{position:absolute;top:58px;right:20px;font-family:'Orbitron',monospace;
+  font-size:12px;color:var(--gold);letter-spacing:.15em;}
+
+/* STATE INDICATOR (bottom) */
+#state-bar{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  display:flex;gap:14px;align-items:center;pointer-events:all;}
+.state-pip{width:44px;height:44px;border-radius:4px;border:2px solid transparent;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  transition:all .15s;position:relative;backdrop-filter:blur(4px);}
+.state-pip.active{border-width:2px;box-shadow:0 0 20px currentColor;}
+.state-pip svg{width:20px;height:20px;pointer-events:none;}
+#state-hint{position:absolute;bottom:72px;left:50%;transform:translateX(-50%);
+  font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.2em;
+  white-space:nowrap;}
+
+/* SHIELD / EFFECTS indicators */
+#buff-bar{position:absolute;top:58px;left:20px;display:flex;gap:8px;}
+.buff-chip{font-family:'Share Tech Mono',monospace;font-size:9px;padding:3px 8px;
+  border:1px solid;border-radius:2px;letter-spacing:.15em;}
+.buff-shield{color:var(--blue);border-color:var(--blue);}
+.buff-slow{color:var(--green);border-color:var(--green);}
+
+/* DEATH SCREEN extras */
+#death-score-val{font-family:'Orbitron',monospace;font-size:clamp(36px,8vw,80px);font-weight:900;color:#fff;}
+#death-best{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.2em;}
+#death-inf{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.15em;}
+#death-frags{font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.15em;}
+#continue-btn{position:relative;z-index:1;}
+.death-row{display:flex;gap:12px;position:relative;z-index:1;}
+
+/* SHOP */
+#shop-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;
+  width:min(560px,90vw);position:relative;z-index:1;max-height:60vh;overflow-y:auto;}
+.shop-card{border:1px solid var(--border);border-radius:4px;padding:14px 12px;
+  background:rgba(0,200,255,.03);cursor:pointer;transition:all .2s;text-align:center;}
+.shop-card:hover:not(.owned){border-color:var(--blue);background:var(--blue-g);}
+.shop-card.owned{border-color:var(--green);opacity:.7;cursor:default;}
+.shop-card.cant{opacity:.35;cursor:not-allowed;}
+.sc-icon{font-size:24px;margin-bottom:6px;}
+.sc-name{font-family:'Orbitron',monospace;font-size:9px;color:var(--blue);letter-spacing:.15em;margin-bottom:4px;}
+.sc-cost{font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--gold);}
+.sc-desc{font-family:'Share Tech Mono',monospace;font-size:9px;color:var(--muted);margin-top:4px;line-height:1.4;}
+
+/* NOTIFS */
+#notif-wrap{position:fixed;top:60px;right:16px;z-index:6500;display:flex;flex-direction:column;gap:6px;pointer-events:none;}
+.notif{font-family:'Share Tech Mono',monospace;font-size:11px;padding:6px 14px;
+  border:1px solid;border-radius:2px;letter-spacing:.1em;
+  animation:nfin .25s ease,nfout .3s 1.7s ease forwards;}
+.notif-blue{color:var(--blue);border-color:var(--blue);background:rgba(0,200,255,.08);}
+.notif-gold{color:var(--gold);border-color:var(--gold);background:rgba(255,215,0,.08);}
+.notif-warn{color:var(--orange);border-color:var(--orange);background:rgba(255,114,0,.08);}
+.notif-good{color:var(--green);border-color:var(--green);background:rgba(0,255,136,.08);}
+@keyframes nfin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
+@keyframes nfout{to{opacity:0;transform:translateX(16px)}}
+
+/* Floating score popup */
+.score-pop{position:fixed;font-family:'Orbitron',monospace;font-size:16px;font-weight:700;
+  pointer-events:none;z-index:6400;animation:spop .9s ease forwards;}
+@keyframes spop{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-60px) scale(1.4)}}
+
+/* AD MODAL */
+#ad-modal{position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.88);
+  display:none;align-items:center;justify-content:center;}
+#ad-modal.open{display:flex;}
+#ad-box{background:rgba(2,12,24,.99);border:1px solid var(--border);border-radius:6px;
+  padding:2rem 2.5rem;max-width:340px;width:90%;text-align:center;
+  box-shadow:0 0 60px rgba(0,200,255,.15);}
+.ad-title{font-family:'Orbitron',monospace;font-size:13px;color:var(--blue);letter-spacing:.2em;margin-bottom:.5rem;}
+.ad-desc{font-size:12px;color:var(--muted);margin-bottom:1.2rem;line-height:1.6;}
+.ad-cd{font-family:'Orbitron',monospace;font-size:42px;font-weight:900;color:var(--gold);margin-bottom:1rem;}
+#ad-claim{width:100%;}
+
+/* MUTE BUTTON */
+#mute-btn{position:fixed;top:12px;right:14px;z-index:6600;width:36px;height:36px;
+  border-radius:4px;border:1px solid rgba(0,200,255,.28);background:rgba(1,5,8,.7);
+  color:var(--blue);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);transition:all .2s;}
+#mute-btn:hover{border-color:var(--blue);background:var(--blue-g);}
+#mute-btn svg{width:18px;height:18px;pointer-events:none;}
+
+/* LEADERBOARD row */
+.lb-row{display:flex;gap:10px;align-items:center;padding:5px 0;
+  border-bottom:1px solid rgba(0,200,255,.06);position:relative;z-index:1;}
+.lb-rank{font-family:'Orbitron',monospace;font-size:9px;color:var(--muted);width:18px;}
+.lb-name{font-family:'Share Tech Mono',monospace;font-size:11px;flex:1;}
+.lb-score{font-family:'Orbitron',monospace;font-size:10px;color:var(--gold);}
+.you{color:var(--blue);}
+
+/* Slipstream streak flash overlay */
+#slip-flash{position:fixed;inset:0;pointer-events:none;z-index:5500;opacity:0;
+  background:radial-gradient(ellipse at center,rgba(255,114,0,.18) 0%,transparent 70%);}
+</style>
+</head>
+<body>
+
+<canvas id="c"></canvas>
+
+<!-- ═══════════ BOOT ═══════════ -->
+<div id="boot">
+  <div class="boot-logo">QUANTUM<br/>BREACH</div>
+  <div class="boot-tagline">NEURAL FIREWALL PENETRATION SYSTEM</div>
+  <div class="boot-bar-shell"><div class="boot-bar-fill" id="bbar"></div></div>
+  <div class="boot-line" id="blog">INITIALIZING QUANTUM CORE...</div>
+</div>
+
+<!-- ═══════════ HUD ═══════════ -->
+<div id="hud" style="display:none;">
+  <div id="hud-top">
+    <div id="hud-left">
+      <div id="hud-score">0</div>
+      <div id="hud-streak">STREAK ×0</div>
+    </div>
+    <div id="hud-right">
+      <div id="hud-speed-label">SPEED</div>
+      <div id="hud-speed">1.0×</div>
+      <div id="hud-influence">◈ 0 INF</div>
+    </div>
+  </div>
+  <!-- Slipstream bar -->
+  <div id="slip-bar-wrap">
+    <div id="slip-bar-fill"></div>
+    <div id="slip-label">SLIPSTREAM ×<span id="slip-val">0</span></div>
+  </div>
+  <!-- Fragment counter -->
+  <div id="frag-counter">◈ 0 FRAGS</div>
+  <div id="buff-bar"></div>
+  <div id="state-hint">TAP / CLICK TO SWITCH STATE</div>
+  <div id="state-bar">
+    <div class="state-pip" id="pip-0" onclick="QB.setState(0)" style="color:var(--blue);background:rgba(0,200,255,.07);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/></svg>
+    </div>
+    <div class="state-pip" id="pip-1" onclick="QB.setState(1)" style="color:var(--orange);background:rgba(255,114,0,.07);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="4" y="4" width="16" height="16"/></svg>
+    </div>
+    <div class="state-pip" id="pip-2" onclick="QB.setState(2)" style="color:var(--green);background:rgba(0,255,136,.07);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="12,3 21,21 3,21"/></svg>
+    </div>
+  </div>
+</div>
+
+<!-- Slipstream edge flash -->
+<div id="slip-flash"></div>
+
+<!-- ═══════════ TITLE SCREEN ═══════════ -->
+<div class="screen" id="scr-title">
+  <div class="screen-bg"></div>
+  <div class="s-title" style="color:var(--blue);text-shadow:0 0 40px var(--blue),0 0 80px rgba(0,200,255,.4);">QUANTUM BREACH</div>
+  <div class="s-sub">MATCH · PASS · SURVIVE · SLIPSTREAM</div>
+  <button class="btn btn-blue" onclick="QB.startGame()">INITIATE BREACH</button>
+  <button class="btn btn-ghost" onclick="QB.showShop()">UPGRADES // SHOP</button>
+  <div style="position:relative;z-index:1;width:min(300px,80vw);">
+    <div id="lb-title"></div>
+  </div>
+</div>
+
+<!-- ═══════════ DEATH SCREEN ═══════════ -->
+<div class="screen" id="scr-death">
+  <div class="screen-bg"></div>
+  <div class="s-title" style="color:var(--red);text-shadow:0 0 30px var(--red);">BREACH FAILED</div>
+  <div id="death-score-val">0</div>
+  <div id="death-best">BEST: 0</div>
+  <div id="death-inf">+0 INFLUENCE EARNED</div>
+  <div id="death-frags">◈ 0 FRAGMENTS COLLECTED</div>
+  <button class="btn btn-orange" id="continue-btn" onclick="QB.triggerContinueAd()">⚡ CONTINUE [WATCH AD]</button>
+  <div class="death-row">
+    <button class="btn btn-blue" onclick="QB.startGame()">RETRY</button>
+    <button class="btn btn-ghost" onclick="QB.showShop()">SHOP</button>
+    <button class="btn btn-ghost" onclick="QB.showTitle()">MENU</button>
+  </div>
+</div>
+
+<!-- ═══════════ SHOP SCREEN ═══════════ -->
+<div class="screen" id="scr-shop">
+  <div class="screen-bg"></div>
+  <div class="s-title" style="font-size:clamp(18px,3.5vw,36px);color:var(--gold);text-shadow:0 0 30px var(--gold);">UPGRADE MATRIX</div>
+  <div style="position:relative;z-index:1;font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--gold);" id="shop-inf-display">◈ 0 INFLUENCE</div>
+  <div id="shop-grid"></div>
+  <button class="btn btn-ghost" onclick="QB.showTitle()" style="position:relative;z-index:1;">← BACK</button>
+</div>
+
+<!-- ═══════════ AD MODAL ═══════════ -->
+<div id="ad-modal">
+  <div id="ad-box">
+    <div class="ad-title">SECOND CHANCE PROTOCOL</div>
+    <div class="ad-desc">Watch a short transmission to revive your Data Core and keep your streak alive.</div>
+    <div class="ad-cd" id="ad-cd">15</div>
+    <button class="btn btn-orange" id="ad-claim" disabled onclick="QB.claimContinue()">CLAIM REVIVAL</button>
+  </div>
+</div>
+
+<!-- ═══════════ NOTIFS ═══════════ -->
+<div id="notif-wrap"></div>
+
+<!-- ═══════════ MUTE BUTTON ═══════════ -->
+<button id="mute-btn" title="Toggle Music" onclick="AUDIO.toggleMute()">
+  <svg id="mute-icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polygon points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+    <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+  </svg>
+  <svg id="mute-icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+    <polygon points="11,5 6,9 2,9 2,15 6,15 11,19 11,5"/>
+    <line x1="23" y1="9" x2="17" y2="15"/>
+    <line x1="17" y1="9" x2="23" y2="15"/>
+  </svg>
+</button>
+
+<!-- ═══════════ BACKGROUND MUSIC ═══════════ -->
+<audio id="bg-music" src="song2.mp3" loop preload="auto"></audio>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  QUANTUM BREACH — Full Game Engine
+//  Single-file · Canvas · rAF · CrazyGames SDK v3
+// ════════════════════════════════════════════════════════════════
+'use strict';
+
+// ── AUDIO CONTROLLER ─────────────────────────────────────────────
+const AUDIO = {
+  _music: null,
+  _muted: false,
+  _started: false,
+  _ctx: null,
+
+  init() {
+    this._music = document.getElementById('bg-music');
+    this._music.volume = 0.45;
+    // Graceful 404 handling for song.mp3
+    this._music.addEventListener('error', () => {
+      console.warn('[AUDIO] song.mp3 not found — music disabled');
+    });
+    try {
+      const saved = localStorage.getItem('qb_muted');
+      if (saved === 'true') { this._muted = true; this._music.muted = true; this._syncIcon(); }
+    } catch(e) {}
+  },
+
+  _getCtx() {
+    if (!this._ctx) {
+      try { this._ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    }
+    return this._ctx;
+  },
+
+  start() {
+    if (this._started) return;
+    this._started = true;
+    this._music.play().catch(() => {});
+    // Resume AudioContext after gesture
+    const ac = this._getCtx();
+    if (ac && ac.state === 'suspended') ac.resume();
+  },
+
+  toggleMute() {
+    this._muted = !this._muted;
+    this._music.muted = this._muted;
+    this._syncIcon();
+    this.beep(this._muted ? 220 : 440, 'sine', 0.05, 0.12);
+    try { localStorage.setItem('qb_muted', this._muted); } catch(e) {}
+  },
+
+  _syncIcon() {
+    document.getElementById('mute-icon-on').style.display  = this._muted ? 'none' : '';
+    document.getElementById('mute-icon-off').style.display = this._muted ? '' : 'none';
+  },
+
+  pauseForAd()  { if (!this._music.paused) this._music.pause(); },
+  resumeFromAd(){ if (this._music.paused && !this._muted) this._music.play().catch(()=>{}); },
+
+  // Procedural SFX using Web Audio API
+  beep(freq, type, vol, dur) {
+    if (this._muted) return;
+    const ac = this._getCtx(); if (!ac) return;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = type || 'sine';
+    o.frequency.setValueAtTime(freq, ac.currentTime);
+    g.gain.setValueAtTime(vol || 0.08, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + (dur || 0.1));
+    o.start(); o.stop(ac.currentTime + (dur || 0.1));
+  },
+
+  sfxPass() {
+    // Rising thrum — gate pass
+    const ac = this._getCtx(); if (!ac || this._muted) return;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(180, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(440, ac.currentTime + 0.12);
+    g.gain.setValueAtTime(0.06, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.15);
+    o.start(); o.stop(ac.currentTime + 0.15);
+  },
+
+  sfxClick() {
+    // Crisp click — state change
+    const ac = this._getCtx(); if (!ac || this._muted) return;
+    const buf = ac.createBuffer(1, ac.sampleRate * 0.04, ac.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+    const src = ac.createBufferSource();
+    const g = ac.createGain();
+    src.buffer = buf; src.connect(g); g.connect(ac.destination);
+    g.gain.setValueAtTime(0.18, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.04);
+    src.start(); src.stop(ac.currentTime + 0.04);
+  },
+
+  sfxSlip() {
+    // Near-miss whoosh
+    const ac = this._getCtx(); if (!ac || this._muted) return;
+    const o = ac.createOscillator();
+    const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = 'sine';
+    o.frequency.setValueAtTime(600, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1200, ac.currentTime + 0.08);
+    g.gain.setValueAtTime(0.04, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.1);
+    o.start(); o.stop(ac.currentTime + 0.1);
+  },
+
+  sfxFragment() {
+    // Data fragment pickup — sparkle
+    const ac = this._getCtx(); if (!ac || this._muted) return;
+    [660, 880, 1100].forEach((f, i) => {
+      const o = ac.createOscillator(); const g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.type = 'sine'; o.frequency.setValueAtTime(f, ac.currentTime + i * 0.04);
+      g.gain.setValueAtTime(0.05, ac.currentTime + i * 0.04);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + i * 0.04 + 0.1);
+      o.start(ac.currentTime + i * 0.04); o.stop(ac.currentTime + i * 0.04 + 0.1);
+    });
+  },
+
+  sfxDeath() {
+    const ac = this._getCtx(); if (!ac || this._muted) return;
+    const o = ac.createOscillator(); const g = ac.createGain();
+    o.connect(g); g.connect(ac.destination);
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(440, ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(55, ac.currentTime + 0.6);
+    g.gain.setValueAtTime(0.12, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.6);
+    o.start(); o.stop(ac.currentTime + 0.6);
+  },
+};
+
+// ── CRAZYGAMES SDK — proper init with fallback stub ──────────────
+// The real SDK script is loaded in <head>. We await init() before
+// calling any other SDK methods. If the SDK fails to load on localhost,
+// the stub below keeps local dev working.
+if (typeof CrazyGames === 'undefined') {
+  window.CrazyGames = {
+    SDK: {
+      async init()  { console.log('[CG-stub] init'); },
+      game: {
+        loadingStart() { console.log('[CG-stub] loadingStart'); },
+        loadingStop()  { console.log('[CG-stub] loadingStop'); },
+        gameplayStart(){ console.log('[CG-stub] gameplayStart'); },
+        gameplayStop() { console.log('[CG-stub] gameplayStop'); },
+        happytime()    { console.log('[CG-stub] happytime'); },
+      },
+      ad: {
+        requestAd(type, cbs) {
+          console.log('[CG-stub] ad.requestAd:', type);
+          cbs.adStarted && cbs.adStarted();
+          setTimeout(() => cbs.adFinished && cbs.adFinished(), 15000);
+        }
+      },
+      data: {
+        async setItem(k,v){ try{localStorage.setItem('qb_'+k,JSON.stringify(v));}catch(e){} },
+        async getItem(k)  { try{return JSON.parse(localStorage.getItem('qb_'+k));}catch(e){return null;} }
+      },
+      leaderboard: {
+        async save(b,s){ console.log('[CG-stub] lb.save',b,s); },
+      }
+    }
+  };
+}
+
+// ── CONSTANTS ────────────────────────────────────────────────────
+const STATES = [
+  { name:'CIRCLE',   color:'#00c8ff', glow:'rgba(0,200,255,',   key:0 },
+  { name:'SQUARE',   color:'#ff7200', glow:'rgba(255,114,0,',   key:1 },
+  { name:'TRIANGLE', color:'#00ff88', glow:'rgba(0,255,136,',   key:2 },
+];
+
+const SHOP_ITEMS = [
+  { id:'trail',   name:'NEON TRAIL',    icon:'✦', cost:150,  desc:'Particle trail follows the Data Core.',         type:'cosmetic' },
+  { id:'shield',  name:'SHIELD',        icon:'⬡', cost:300,  desc:'Absorbs 1 fatal hit. Single use per run.',      type:'active' },
+  { id:'slowmo',  name:'SLOW-MO',       icon:'⧖', cost:500,  desc:'Hold tap for 2s speed reduction. 1 use.',       type:'active' },
+  { id:'trail2',  name:'PLASMA WAKE',   icon:'★', cost:800,  desc:'Wider, multi-color trail effect.',               type:'cosmetic' },
+  { id:'shield2', name:'IRON SHIELD',   icon:'⬡⬡',cost:1200, desc:'Absorbs 2 fatal hits per run.',                  type:'active' },
+  { id:'ghost',   name:'GHOST MODE',    icon:'◌', cost:2000, desc:'Phase through 1 wrong-color gate.',              type:'active' },
+  { id:'slip2x',  name:'SLIP BOOSTER',  icon:'⚡', cost:900,  desc:'Slipstream multiplier starts at ×2.',           type:'passive' },
+  { id:'fragmag', name:'FRAG MAGNET',   icon:'◈', cost:1500, desc:'Data fragments pulled toward you (wider pickup radius).',type:'passive'},
+  { id:'rubberband',name:'FLOW STATE',  icon:'∞', cost:2500, desc:'Rubber-band difficulty — stay in the zone longer.',type:'passive'},
+];
+
+const LEADERBOARD_MOCK = [
+  { name:'NEXUS_7',    score:48320 },
+  { name:'DARKVEIL',   score:31500 },
+  { name:'0xPHANTOM',  score:22780 },
+  { name:'CIPHER_X',   score:15440 },
+];
+
+// ── SAVE STATE ───────────────────────────────────────────────────
+const SAVE = {
+  influence: 0,
+  best: 0,
+  owned: new Set(),
+  load(data) {
+    if (!data) return;
+    this.influence = data.influence || 0;
+    this.best = data.best || 0;
+    this.owned = new Set(data.owned || []);
+  },
+  async persist() {
+    try {
+      await CrazyGames.SDK.data.setItem('save', {
+        influence: this.influence,
+        best: this.best,
+        owned: [...this.owned]
+      });
+    } catch(e) { console.warn('[SAVE] data.setItem failed', e); }
+    try {
+      if (CrazyGames.SDK.leaderboard && typeof CrazyGames.SDK.leaderboard.save === 'function') {
+        await CrazyGames.SDK.leaderboard.save('highScore', this.best);
+      }
+    } catch(e) { console.warn('[SAVE] leaderboard.save failed', e); }
+  }
+};
+
+// ── CANVAS SETUP ─────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+let W, H, CX, CY;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+  CX = W / 2; CY = H / 2;
+  if (typeof G !== 'undefined' && G.running) G.cam.y = CY;
+}
+window.addEventListener('resize', resize);
+window.addEventListener('DOMContentLoaded', resize);
+
+// ── PARTICLE SYSTEM ──────────────────────────────────────────────
+const particles = [];
+
+function spawnBurst(x, y, color, count, speedMul = 1) {
+  for (let i = 0; i < count; i++) {
+    const ang  = (Math.PI * 2 * i / count) + Math.random() * .4;
+    const spd  = (2 + Math.random() * 5) * speedMul;
+    particles.push({ x, y,
+      vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+      life: 1, decay: .018 + Math.random() * .025,
+      r: 2 + Math.random() * 3, color });
+  }
+}
+
+function spawnTrail(x, y, color, wide) {
+  const count = wide ? 5 : 2;
+  for (let i = 0; i < count; i++) {
+    const ox = (Math.random() - .5) * (wide ? 14 : 6);
+    particles.push({ x: x + ox, y,
+      vx: (Math.random() - .5) * .6, vy: 1 + Math.random() * 2,
+      life: .9, decay: .06 + Math.random() * .04,
+      r: wide ? 2 + Math.random() * 2 : 1 + Math.random(), color });
+  }
+}
+
+function spawnSlipStream(x, y, color) {
+  // Slipstream sparks — horizontal streaks
+  for (let i = 0; i < 3; i++) {
+    const side = Math.random() < .5 ? -1 : 1;
+    particles.push({ x, y: y + (Math.random() - .5) * 30,
+      vx: side * (4 + Math.random() * 8), vy: (Math.random() - .5) * 1,
+      life: .7, decay: .07 + Math.random() * .05,
+      r: 1.5 + Math.random() * 1.5, color });
+  }
+}
+
+function updateParticles() {
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx; p.y += p.vy;
+    p.vy += .05;
+    p.life -= p.decay;
+    if (p.life <= 0) { particles.splice(i, 1); continue; }
+    ctx.save();
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = p.color;
+    ctx.shadowBlur = 8; ctx.shadowColor = p.color;
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── GAME STATE ───────────────────────────────────────────────────
+const G = {
+  running: false, dead: false, paused: false,
+  score: 0, streak: 0, multiplier: 1,
+  speed: 3.0, gateSpeed: 3.0,
+  distance: 0, influence: 0,
+  playerState: 0, playerY: 0, playerX: 0,
+  shakeAmt: 0, flashColor: null, flashAlpha: 0,
+  adContinueUsed: false,
+  shields: 0, ghostGates: 0, slowmoLeft: 0, slowmoActive: false,
+  cam: { y: 0 },
+  tunnelOffset: 0, gates: [], nextGateDist: 0, gateSpacing: 220,
+
+  // ── NEW: Slipstream / Near-Miss ──
+  slipMeter: 0,       // 0–1, fills on near-misses
+  slipMulti: 1,       // bonus multiplier from slipstream
+  slipCooldown: 0,    // frames since last near-miss
+
+  // ── NEW: Data Fragments ──
+  fragments: [],      // spawned fragment objects
+  fragsCollected: 0,  // this run
+  nextFragDist: 0,
+
+  // ── NEW: Rubber-band difficulty ──
+  deathHistory: [],   // recent death speeds for rubber-banding
+
+  reset() {
+    this.score = 0; this.streak = 0; this.multiplier = 1;
+    this.speed = 3.0; this.gateSpeed = 3.0;
+    this.distance = 0; this.influence = 0;
+    this.playerState = 0; this.playerX = CX; this.playerY = CY + 40;
+    this.shakeAmt = 0; this.flashColor = null; this.flashAlpha = 0;
+    this.dead = false; this.adContinueUsed = false;
+    this.gates = []; this.fragments = [];
+    this.tunnelOffset = 0; this.nextGateDist = 0; this.gateSpacing = 220;
+    this.slipMeter = 0; this.slipMulti = 1; this.slipCooldown = 0;
+    this.fragsCollected = 0; this.nextFragDist = 300;
+    this.shields    = SAVE.owned.has('shield2') ? 2 : SAVE.owned.has('shield') ? 1 : 0;
+    this.ghostGates = SAVE.owned.has('ghost') ? 1 : 0;
+    this.slowmoLeft = SAVE.owned.has('slowmo') ? 1 : 0;
+    this.slowmoActive = false;
+    updateBuffBar();
+    particles.length = 0;
+    for (let i = 0; i < 5; i++) this.spawnGate(i * this.gateSpacing);
+  },
+
+  spawnGate(yPos) {
+    const stateIdx = Math.floor(Math.random() * 3);
+    // Rubber-band: widen gap slightly at high streaks
+    let gapW = Math.max(60, 160 - this.distance * 0.003);
+    if (SAVE.owned.has('rubberband') && this.streak >= 20) {
+      gapW = Math.min(gapW * 1.3, gapW + 30);
+    } else if (this.streak >= 20) {
+      gapW = Math.min(gapW * 1.15, gapW + 15);
+    }
+    const gapX = CX + (Math.random() - .5) * (W * .28);
+    this.gates.push({
+      y: yPos !== undefined ? yPos : -60,
+      stateIdx, color: STATES[stateIdx].color, glow: STATES[stateIdx].glow,
+      gapX, gapW,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (.003 + Math.random() * .004) * (Math.random() < .5 ? 1 : -1),
+      passed: false, hitAnim: 0, width: W, height: 22,
+      // has a fragment inside?
+      hasFragment: Math.random() < 0.35, fragmentCollected: false,
+    });
+  },
+
+  spawnStandaloneFragment(yPos) {
+    // Free-floating fragment in the open lane
+    this.fragments.push({
+      x: CX + (Math.random() - .5) * (W * .3),
+      y: yPos !== undefined ? yPos : -80,
+      collected: false, anim: 0,
+      color: STATES[Math.floor(Math.random()*3)].color,
+      pulse: Math.random() * Math.PI * 2,
+    });
+  },
+};
+
+// ── INPUT HANDLING ────────────────────────────────────────────────
+let touchStartY = null;
+let touchHoldTimer = null;
+
+function handleInput(e) {
+  if (!G.running || G.dead) return;
+  e.preventDefault();
+  const nextState = (G.playerState + 1) % 3;
+  QB.setState(nextState);
+  AUDIO.sfxClick();
+}
+
+function handleSlowmoHold(start) {
+  if (!G.running || G.dead) return;
+  if (start && G.slowmoLeft > 0 && !G.slowmoActive) {
+    G.slowmoActive = true; G.slowmoLeft = 0;
+    updateBuffBar();
+    notify('SLOW-MO ACTIVE', 'good');
+    setTimeout(() => { G.slowmoActive = false; }, 2000);
+  }
+}
+
+canvas.addEventListener('click',      e => { AUDIO.start(); handleInput(e); }, { passive: false });
+canvas.addEventListener('touchstart', e => { AUDIO.start(); touchStartY = e.touches[0].clientY; handleInput(e); }, { passive: false });
+canvas.addEventListener('touchend',   () => { touchStartY = null; }, { passive: false });
+
+canvas.addEventListener('pointerdown', () => {
+  touchHoldTimer = setTimeout(() => handleSlowmoHold(true), 400);
+});
+canvas.addEventListener('pointerup',  () => { clearTimeout(touchHoldTimer); });
+
+window.addEventListener('keydown', e => {
+  if (['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code)) e.preventDefault();
+  AUDIO.start();
+  if (!G.running || G.dead) return;
+  if (e.code === 'Space' || e.code === 'ArrowRight') { QB.setState((G.playerState + 1) % 3); AUDIO.sfxClick(); }
+  if (e.code === 'KeyZ') { QB.setState(0); AUDIO.sfxClick(); }
+  if (e.code === 'KeyX') { QB.setState(1); AUDIO.sfxClick(); }
+  if (e.code === 'KeyC') { QB.setState(2); AUDIO.sfxClick(); }
+  if (e.code === 'KeyS') handleSlowmoHold(true);
+});
+window.addEventListener('wheel', e => e.preventDefault(), { passive: false });
+
+// ── DRAW HELPERS ─────────────────────────────────────────────────
+function drawPlayerCircle(x, y, r, color) {
+  ctx.save();
+  ctx.shadowBlur = 24; ctx.shadowColor = color;
+  ctx.strokeStyle = color; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+  ctx.shadowBlur = 8;
+  ctx.fillStyle = color + '44'; ctx.fill();
+  ctx.fillStyle = color;
+  ctx.beginPath(); ctx.arc(x, y, r * .32, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
+
+function drawPlayerSquare(x, y, r, color) {
+  ctx.save(); ctx.translate(x, y);
+  const t = performance.now() * .002;
+  ctx.rotate(t);
+  ctx.shadowBlur = 24; ctx.shadowColor = color;
+  ctx.strokeStyle = color; ctx.lineWidth = 3;
+  const s = r * 1.4;
+  ctx.strokeRect(-s/2, -s/2, s, s);
+  ctx.fillStyle = color + '33'; ctx.fillRect(-s/2, -s/2, s, s);
+  ctx.fillStyle = color; const si = s * .22;
+  ctx.fillRect(-si/2, -si/2, si, si);
+  ctx.restore();
+}
+
+function drawPlayerTriangle(x, y, r, color) {
+  ctx.save(); ctx.translate(x, y);
+  const t = performance.now() * .0015;
+  ctx.rotate(-t);
+  ctx.shadowBlur = 24; ctx.shadowColor = color;
+  ctx.strokeStyle = color; ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(0, -r * 1.3);
+  ctx.lineTo(r * 1.12, r * .8);
+  ctx.lineTo(-r * 1.12, r * .8);
+  ctx.closePath(); ctx.stroke();
+  ctx.fillStyle = color + '33'; ctx.fill();
+  ctx.restore();
+}
+
+function drawPlayer() {
+  const s = STATES[G.playerState];
+  const x = G.playerX, y = G.playerY;
+  const r = 18;
+
+  // Slipstream aura when meter is charging
+  if (G.slipMeter > 0.1) {
+    ctx.save();
+    ctx.shadowBlur = 30 + G.slipMeter * 30;
+    ctx.shadowColor = '#ff7200';
+    ctx.globalAlpha = G.slipMeter * 0.4;
+    ctx.strokeStyle = '#ff7200';
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, y, r + 8 + G.slipMeter * 10, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    spawnSlipStream(x, y, '#ff7200');
+  }
+
+  if (SAVE.owned.has('trail') || SAVE.owned.has('trail2')) {
+    const colors = SAVE.owned.has('trail2')
+      ? [s.color, STATES[(G.playerState+1)%3].color]
+      : [s.color];
+    colors.forEach(c => spawnTrail(x + (Math.random()-.5)*4, y + r, c, SAVE.owned.has('trail2')));
+  }
+  if      (G.playerState === 0) drawPlayerCircle(x, y, r, s.color);
+  else if (G.playerState === 1) drawPlayerSquare(x, y, r, s.color);
+  else                          drawPlayerTriangle(x, y, r, s.color);
+}
+
+function drawGate(gate) {
+  const { y, color, glow, gapX, gapW, rotation, hitAnim } = gate;
+  const hw = gate.width, th = gate.height;
+  const extra = Math.max(0, hitAnim) * 6;
+
+  ctx.save();
+  ctx.translate(CX, y);
+  ctx.rotate(rotation);
+  ctx.shadowBlur = 18 + extra * 2; ctx.shadowColor = color;
+  ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+
+  const lw = Math.max(0, (hw / 2) + (gapX - CX) - gapW / 2);
+  if (lw > 0) {
+    ctx.beginPath(); ctx.rect(-hw / 2, -th / 2, lw, th + extra);
+    ctx.fillStyle = glow + '.18)'; ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+    ctx.strokeRect(-hw / 2, -th / 2, lw, th + extra);
+  }
+  const rx = (gapX - CX) + gapW / 2;
+  const rw = Math.max(0, hw / 2 - rx);
+  if (rw > 0) {
+    ctx.fillStyle = glow + '.18)'; ctx.fillRect(rx, -th / 2, rw, th + extra);
+    ctx.strokeStyle = color; ctx.strokeRect(rx, -th / 2, rw, th + extra);
+  }
+
+  ctx.globalAlpha = .35 + Math.sin(Date.now() * .003) * .1;
+  ctx.fillStyle = color;
+  ctx.fillRect(gapX - CX - gapW / 2, -th / 2, gapW, th);
+  ctx.globalAlpha = 1;
+
+  ctx.save(); ctx.rotate(-rotation);
+  ctx.fillStyle = color;
+  ctx.font = `bold 10px 'Share Tech Mono'`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.shadowBlur = 8; ctx.shadowColor = color;
+  ctx.fillText(STATES[gate.stateIdx].name[0], gapX - CX, 0);
+  ctx.restore();
+
+  // Draw fragment inside gate gap if it hasn't been collected
+  if (gate.hasFragment && !gate.fragmentCollected) {
+    ctx.save(); ctx.rotate(-rotation);
+    const pulse = Math.sin(Date.now() * .005) * 3;
+    ctx.shadowBlur = 14; ctx.shadowColor = color;
+    ctx.fillStyle = '#ffd700';
+    ctx.globalAlpha = .85;
+    const fx = gapX - CX, fy = 0;
+    ctx.beginPath();
+    ctx.arc(fx, fy, 5 + pulse * .3, 0, Math.PI * 2);
+    ctx.fill();
+    // diamond sparkle
+    ctx.strokeStyle = color; ctx.lineWidth = 1; ctx.globalAlpha = .5;
+    ctx.beginPath();
+    ctx.moveTo(fx, fy - 9 - pulse * .3);
+    ctx.lineTo(fx + 5, fy);
+    ctx.lineTo(fx, fy + 9 + pulse * .3);
+    ctx.lineTo(fx - 5, fy);
+    ctx.closePath(); ctx.stroke();
+    ctx.restore();
+  }
+
+  ctx.restore();
+}
+
+function drawFragments() {
+  G.fragments.forEach(f => {
+    if (f.collected) return;
+    f.pulse += 0.07;
+    const pulse = Math.sin(f.pulse) * 3;
+    ctx.save();
+    ctx.shadowBlur = 20; ctx.shadowColor = f.color;
+    ctx.fillStyle = '#ffd700'; ctx.globalAlpha = .9;
+    ctx.beginPath(); ctx.arc(f.x, f.y, 7 + pulse * .3, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = f.color; ctx.lineWidth = 1.5; ctx.globalAlpha = .6;
+    ctx.beginPath();
+    ctx.moveTo(f.x, f.y - 12 - pulse * .3);
+    ctx.lineTo(f.x + 7, f.y);
+    ctx.lineTo(f.x, f.y + 12 + pulse * .3);
+    ctx.lineTo(f.x - 7, f.y);
+    ctx.closePath(); ctx.stroke();
+    ctx.restore();
+  });
+}
+
+function drawTunnel() {
+  ctx.save();
+  // Tint tunnel orange slightly when slipstreaming
+  const slipTint = G.slipMeter > 0.5 ? G.slipMeter * .06 : 0;
+  const off = (G.tunnelOffset * .4) % 60;
+  ctx.strokeStyle = `rgba(0,200,255,${0.04 + slipTint})`;
+  ctx.lineWidth = .5;
+  for (let y = -off; y < H + 60; y += 60) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+  const edgeW = W * .12;
+  const grad = ctx.createLinearGradient(0, 0, edgeW, 0);
+  grad.addColorStop(0, `rgba(0,200,255,.12)`);
+  grad.addColorStop(1, `rgba(0,200,255,0)`);
+  ctx.fillStyle = grad; ctx.fillRect(0, 0, edgeW, H);
+  const grad2 = ctx.createLinearGradient(W - edgeW, 0, W, 0);
+  grad2.addColorStop(0, `rgba(0,200,255,0)`);
+  grad2.addColorStop(1, `rgba(0,200,255,.12)`);
+  ctx.fillStyle = grad2; ctx.fillRect(W - edgeW, 0, edgeW, H);
+  ctx.restore();
+}
+
+function drawFlash() {
+  if (!G.flashColor || G.flashAlpha <= 0) return;
+  ctx.save();
+  ctx.globalAlpha = G.flashAlpha;
+  ctx.fillStyle = G.flashColor;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  G.flashAlpha -= .04;
+}
+
+function drawHUD() {
+  document.getElementById('hud-score').textContent = Math.floor(G.score).toLocaleString();
+  document.getElementById('hud-streak').textContent = `STREAK ×${G.streak}`;
+  document.getElementById('hud-speed').textContent  = G.speed.toFixed(1) + '×';
+  document.getElementById('hud-influence').textContent = `◈ ${Math.floor(SAVE.influence + G.influence)} INF`;
+  document.getElementById('frag-counter').textContent = `◈ ${G.fragsCollected} FRAGS`;
+
+  // Slipstream meter
+  const slipFill = document.getElementById('slip-bar-fill');
+  const slipLabel = document.getElementById('slip-label');
+  const slipVal = document.getElementById('slip-val');
+  slipFill.style.width = (G.slipMeter * 100) + '%';
+  if (G.slipMeter > 0.05) {
+    slipLabel.style.opacity = '1';
+    slipVal.textContent = G.slipMulti.toFixed(1);
+  } else {
+    slipLabel.style.opacity = '0';
+  }
+
+  for (let i = 0; i < 3; i++) {
+    document.getElementById('pip-'+i).classList.toggle('active', i === G.playerState);
+  }
+}
+
+// ── GAME UPDATE ───────────────────────────────────────────────────
+function updateGame() {
+  if (!G.running || G.dead) return;
+
+  const spd = G.slowmoActive ? G.speed * .35 : G.speed;
+  G.tunnelOffset += spd;
+  G.distance     += spd;
+
+  // Speed ramp
+  G.speed = 3.0 + Math.floor(G.distance / 800) * 0.18;
+  G.speed = Math.min(G.speed, 12);
+
+  // Score: distance × gate multiplier × slipstream multiplier
+  G.score += spd * G.multiplier * G.slipMulti * .04;
+  G.influence = G.distance / 400;
+  if (G.shakeAmt > 0) G.shakeAmt *= .82;
+
+  // ── Slipstream decay ──
+  G.slipCooldown++;
+  if (G.slipCooldown > 40) {
+    G.slipMeter = Math.max(0, G.slipMeter - 0.008);
+    if (G.slipMeter < 0.01) {
+      G.slipMulti = 1;
+      document.getElementById('slip-flash').style.opacity = 0;
+    }
+  }
+
+  // ── Gate update + near-miss detection ──
+  for (let i = G.gates.length - 1; i >= 0; i--) {
+    const gate = G.gates[i];
+    gate.y += spd;
+    gate.rotation += gate.rotSpeed;
+    if (gate.hitAnim > 0) gate.hitAnim -= .06;
+
+    // Fragment inside gate — check collection
+    if (gate.hasFragment && !gate.fragmentCollected) {
+      const dx = G.playerX - gate.gapX;
+      const dy = G.playerY - gate.y;
+      const pickR = SAVE.owned.has('fragmag') ? 40 : 22;
+      if (Math.abs(dx) < pickR && Math.abs(dy) < pickR) {
+        gate.fragmentCollected = true;
+        G.fragsCollected++;
+        G.influence += 2;
+        AUDIO.sfxFragment();
+        showScorePop(G.playerX, G.playerY - 30, '+FRAG ◈', '#ffd700');
+        spawnBurst(gate.gapX, gate.y, '#ffd700', 16, 1);
+      }
+    }
+
+    // Check pass-through
+    if (!gate.passed && gate.y > G.playerY - gate.height / 2 && gate.y < G.playerY + gate.height / 2) {
+      const px = G.playerX;
+      const inGap = px > gate.gapX - gate.gapW / 2 && px < gate.gapX + gate.gapW / 2;
+
+      if (inGap) {
+        if (gate.stateIdx === G.playerState) {
+          // PERFECT PASS
+          gate.passed = true; gate.hitAnim = 1;
+          G.streak++;
+          G.multiplier = 1 + Math.floor(G.streak / 3) * .5;
+          G.shakeAmt = 5;
+          G.flashColor = STATES[G.playerState].color + '55';
+          G.flashAlpha = .38;
+          spawnBurst(G.playerX, G.playerY, STATES[G.playerState].color, 28, 1.2);
+          AUDIO.sfxPass();
+
+          // Near-miss bonus: how close to wall edges?
+          const distToLeft  = (px) - (gate.gapX - gate.gapW / 2);
+          const distToRight = (gate.gapX + gate.gapW / 2) - (px);
+          const nearMiss = Math.min(distToLeft, distToRight);
+          const nearThreshold = gate.gapW * 0.25;
+          if (nearMiss < nearThreshold) {
+            const ratio = 1 - (nearMiss / nearThreshold);
+            G.slipMeter = Math.min(1, G.slipMeter + ratio * 0.3);
+            G.slipCooldown = 0;
+            const baseMulti = SAVE.owned.has('slip2x') ? 2 : 1;
+            G.slipMulti = baseMulti + G.slipMeter * 3;
+            AUDIO.sfxSlip();
+            spawnSlipStream(G.playerX, G.playerY, '#ff7200');
+            const slipFlash = document.getElementById('slip-flash');
+            slipFlash.style.opacity = ratio * 0.7;
+            setTimeout(() => { slipFlash.style.opacity = 0; }, 120);
+            if (G.slipMeter >= 0.9) notify('⚡ SLIPSTREAM MAX ×' + G.slipMulti.toFixed(1), 'warn');
+          }
+
+          try { CrazyGames.SDK.game.happytime(); } catch(e) {}
+          if (G.streak > 0 && G.streak % 10 === 0) notify(`🔥 STREAK ×${G.streak}`, 'gold');
+          showScorePop(G.playerX, G.playerY - 40,
+            '+' + Math.round(spd * G.multiplier * G.slipMulti * .04 * 100),
+            STATES[G.playerState].color);
+        } else {
+          handleDeath(gate);
+        }
+      } else {
+        handleDeath(gate);
+      }
+    }
+    if (gate.y > H + 80) G.gates.splice(i, 1);
+  }
+
+  // ── Standalone fragment update ──
+  G.nextFragDist += spd;
+  if (G.nextFragDist >= 480) {
+    G.nextFragDist = 0;
+    G.spawnStandaloneFragment(-80);
+  }
+  for (let i = G.fragments.length - 1; i >= 0; i--) {
+    const f = G.fragments[i];
+    f.y += spd;
+    if (!f.collected) {
+      const pickR = SAVE.owned.has('fragmag') ? 55 : 28;
+      const dx = G.playerX - f.x;
+      const dy = G.playerY - f.y;
+      if (SAVE.owned.has('fragmag')) {
+        // Magnetic pull
+        const d = Math.sqrt(dx*dx + dy*dy);
+        if (d < 120) { f.x += dx * 0.06; f.y += dy * 0.06; }
+      }
+      if (Math.abs(dx) < pickR && Math.abs(dy) < pickR) {
+        f.collected = true;
+        G.fragsCollected++;
+        G.influence += 1.5;
+        G.slipMeter = Math.min(1, G.slipMeter + 0.12);
+        G.slipCooldown = 0;
+        AUDIO.sfxFragment();
+        showScorePop(f.x, f.y - 30, '+FRAG ◈', '#ffd700');
+        spawnBurst(f.x, f.y, '#ffd700', 14, 1);
+      }
+    }
+    if (f.y > H + 80) G.fragments.splice(i, 1);
+  }
+
+  // ── Spawn gates ──
+  G.nextGateDist += spd;
+  while (G.nextGateDist >= G.gateSpacing) {
+    G.nextGateDist -= G.gateSpacing;
+    G.spawnGate();
+    G.gateSpacing = Math.max(140, 220 - G.distance * .004);
+  }
+}
+
+// ── Floating score popup ──────────────────────────────────────────
+function showScorePop(x, y, text, color) {
+  const el = document.createElement('div');
+  el.className = 'score-pop';
+  el.textContent = text;
+  el.style.cssText = `left:${x}px;top:${y}px;color:${color};text-shadow:0 0 12px ${color};transform:translateX(-50%);`;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function handleDeath(gate) {
+  if (G.ghostGates > 0) {
+    G.ghostGates--;
+    gate.passed = true;
+    notify('GHOST MODE — PHASED THROUGH', 'blue');
+    spawnBurst(G.playerX, G.playerY, '#ffffff', 14, .8);
+    updateBuffBar();
+    return;
+  }
+  if (G.shields > 0) {
+    G.shields--;
+    gate.passed = true;
+    G.shakeAmt = 14;
+    G.flashColor = '#ff2244'; G.flashAlpha = .5;
+    spawnBurst(G.playerX, G.playerY, '#ffffff', 20, 1);
+    notify('SHIELD ABSORBED HIT', 'blue');
+    updateBuffBar();
+    return;
+  }
+  gate.passed = true;
+  G.dead = true; G.running = false;
+  G.shakeAmt = 20; G.flashColor = '#ff2244'; G.flashAlpha = .7;
+  spawnBurst(G.playerX, G.playerY, STATES[G.playerState].color, 50, 1.6);
+  spawnBurst(G.playerX, G.playerY, '#ff2244', 30, 1.2);
+  AUDIO.sfxDeath();
+  // Record death speed for rubber-banding
+  G.deathHistory.push(G.speed);
+  if (G.deathHistory.length > 10) G.deathHistory.shift();
+  try { CrazyGames.SDK.game.gameplayStop(); } catch(e) {}
+  endRun();
+}
+
+function endRun() {
+  const earned = Math.floor(G.influence + G.fragsCollected * 2);
+  SAVE.influence += earned;
+  if (G.score > SAVE.best) SAVE.best = Math.floor(G.score);
+  SAVE.persist();
+  setTimeout(() => {
+    document.getElementById('death-score-val').textContent = Math.floor(G.score).toLocaleString();
+    document.getElementById('death-best').textContent      = 'BEST: ' + SAVE.best.toLocaleString();
+    document.getElementById('death-inf').textContent       = '+' + earned + ' INFLUENCE EARNED';
+    document.getElementById('death-frags').textContent     = '◈ ' + G.fragsCollected + ' FRAGMENTS COLLECTED';
+    document.getElementById('continue-btn').style.display  = G.adContinueUsed ? 'none' : '';
+    show('scr-death');
+    document.getElementById('hud').style.display = 'none';
+  }, 900);
+}
+
+// ── RENDER LOOP ───────────────────────────────────────────────────
+let lastFrame = 0;
+function renderLoop(ts) {
+  requestAnimationFrame(renderLoop);
+  const dt = ts - lastFrame;
+  if (dt < 14) return;
+  lastFrame = ts;
+
+  if (!G.running && !G.dead) {
+    ctx.fillStyle = '#010508'; ctx.fillRect(0, 0, W, H);
+    return;
+  }
+
+  ctx.save();
+  const sx = G.shakeAmt > .5 ? (Math.random() - .5) * G.shakeAmt : 0;
+  const sy = G.shakeAmt > .5 ? (Math.random() - .5) * G.shakeAmt : 0;
+  ctx.translate(sx, sy);
+  ctx.fillStyle = '#010508'; ctx.fillRect(-10, -10, W + 20, H + 20);
+
+  drawTunnel();
+  G.gates.forEach(gate => drawGate(gate));
+  drawFragments();
+  if (!G.dead) drawPlayer();
+  updateParticles();
+  drawFlash();
+  updateGame();
+  drawHUD();
+  ctx.restore();
+}
+requestAnimationFrame(renderLoop);
+
+// ── SCREEN MANAGEMENT ─────────────────────────────────────────────
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('show'));
+  if (id) document.getElementById(id).classList.add('show');
+}
+
+function updateBuffBar() {
+  const bar = document.getElementById('buff-bar');
+  bar.innerHTML = '';
+  if (G.shields > 0)    bar.innerHTML += `<div class="buff-chip buff-shield">⬡ SHIELD ×${G.shields}</div>`;
+  if (G.ghostGates > 0) bar.innerHTML += `<div class="buff-chip buff-shield">◌ GHOST ×${G.ghostGates}</div>`;
+  if (G.slowmoLeft > 0) bar.innerHTML += `<div class="buff-chip buff-slow">⧖ SLOW-MO READY</div>`;
+  if (G.slowmoActive)   bar.innerHTML += `<div class="buff-chip buff-slow">⧖ SLOWING...</div>`;
+}
+
+// ── PUBLIC API ────────────────────────────────────────────────────
+const QB = {
+  setState(idx) {
+    if (!G.running || G.dead) return;
+    G.playerState = idx;
+  },
+
+  startGame() {
+    AUDIO.start();
+    show(null);
+    document.getElementById('hud').style.display = '';
+    document.getElementById('state-hint').style.display = G.distance === 0 ? '' : 'none';
+    G.reset();
+    G.running = true;
+    try { CrazyGames.SDK.game.gameplayStart(); } catch(e) {}
+    setTimeout(() => {
+      const sh = document.getElementById('state-hint');
+      if (sh) sh.style.display = 'none';
+    }, 3000);
+  },
+
+  showTitle() {
+    G.running = false;
+    show('scr-title');
+    document.getElementById('hud').style.display = 'none';
+    buildLeaderboard('lb-title');
+  },
+
+  showShop() {
+    show('scr-shop');
+    buildShop();
+  },
+
+  triggerContinueAd() {
+    if (G.adContinueUsed) return;
+    const modal = document.getElementById('ad-modal');
+    const cdEl  = document.getElementById('ad-cd');
+    const btn   = document.getElementById('ad-claim');
+    modal.classList.add('open');
+    btn.disabled = true;
+    let t = 15; cdEl.textContent = t;
+    try { CrazyGames.SDK.game.gameplayStop(); } catch(e) {}
+    AUDIO.pauseForAd();
+    try {
+      CrazyGames.SDK.ad.requestAd('rewarded', {
+        adStarted:  () => {},
+        adFinished: () => { clearInterval(iv); cdEl.textContent = '✓'; btn.disabled = false; try{CrazyGames.SDK.game.gameplayStart();}catch(e){} AUDIO.resumeFromAd(); },
+        adError:    () => { clearInterval(iv); modal.classList.remove('open'); notify('AD UNAVAILABLE', 'warn'); AUDIO.resumeFromAd(); }
+      });
+    } catch(e) { console.warn('[AD] requestAd failed', e); }
+    const iv = setInterval(() => { t--; cdEl.textContent = t; if (t <= 0) { clearInterval(iv); cdEl.textContent = '✓'; btn.disabled = false; } }, 1000);
+  },
+
+  claimContinue() {
+    document.getElementById('ad-modal').classList.remove('open');
+    G.adContinueUsed = true;
+    G.dead = false; G.running = true;
+    G.shields = 1;
+    G.flashColor = '#00c8ff'; G.flashAlpha = .3;
+    G.gates = G.gates.filter(g => g.y > G.playerY + 80 || g.y < G.playerY - 80);
+    show(null);
+    document.getElementById('hud').style.display = '';
+    updateBuffBar();
+    try { CrazyGames.SDK.game.gameplayStart(); } catch(e) {}
+    notify('DATA CORE REVIVED — SHIELD ACTIVE', 'good');
+  },
+};
+
+// ── SHOP ─────────────────────────────────────────────────────────
+function buildShop() {
+  document.getElementById('shop-inf-display').textContent = `◈ ${Math.floor(SAVE.influence)} INFLUENCE`;
+  const grid = document.getElementById('shop-grid');
+  grid.innerHTML = '';
+  SHOP_ITEMS.forEach(item => {
+    const owned   = SAVE.owned.has(item.id);
+    const canAfford = SAVE.influence >= item.cost;
+    const cls = owned ? 'owned' : (!canAfford ? 'cant' : '');
+    grid.innerHTML += `
+      <div class="shop-card ${cls}" onclick="shopBuy('${item.id}')">
+        <div class="sc-icon">${item.icon}</div>
+        <div class="sc-name">${item.name}</div>
+        <div class="sc-cost">${owned ? '✓ OWNED' : '◈ '+item.cost+' INF'}</div>
+        <div class="sc-desc">${item.desc}</div>
+      </div>`;
+  });
+}
+
+function shopBuy(id) {
+  const item = SHOP_ITEMS.find(x => x.id === id);
+  if (!item || SAVE.owned.has(id)) return;
+  if (SAVE.influence < item.cost) { notify('INSUFFICIENT INFLUENCE', 'warn'); return; }
+  SAVE.influence -= item.cost;
+  SAVE.owned.add(id);
+  SAVE.persist();
+  buildShop();
+  notify('ACQUIRED: ' + item.name, 'gold');
+  AUDIO.sfxFragment();
+}
+
+// ── LEADERBOARD ───────────────────────────────────────────────────
+function buildLeaderboard(containerId) {
+  const rows = [...LEADERBOARD_MOCK, { name:'[YOU]', score: SAVE.best, you: true }]
+    .sort((a,b) => b.score - a.score);
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = rows.map((r, i) => `
+    <div class="lb-row">
+      <div class="lb-rank">${i+1}</div>
+      <div class="lb-name ${r.you?'you':''}">${r.name}</div>
+      <div class="lb-score">${r.score.toLocaleString()}</div>
+    </div>`).join('');
+}
+
+// ── NOTIFICATIONS ─────────────────────────────────────────────────
+function notify(msg, type = 'blue') {
+  const wrap = document.getElementById('notif-wrap');
+  const el   = document.createElement('div');
+  el.className = `notif notif-${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+// ── BOOT SEQUENCE ─────────────────────────────────────────────────
+async function boot() {
+  resize();
+  AUDIO.init();
+
+  const bbar = document.getElementById('bbar');
+  const blog = document.getElementById('blog');
+  const steps = [
+    'QUANTUM CORE INITIALIZING...',
+    'LOADING FIREWALL MATRICES...',
+    'CALIBRATING BREACH PROTOCOLS...',
+    'SYNCING CRAZYGAMES SDK...',
+    'RESTORING NEURAL SAVE STATE...',
+    'DEPLOYING PARTICLE SYSTEM...',
+    'SYSTEM READY — INITIATE BREACH',
+  ];
+
+  // Step 1: init SDK FIRST (before any other SDK calls)
+  try {
+    await CrazyGames.SDK.init();
+  } catch(e) {
+    console.warn('[CG] SDK.init() failed:', e);
+  }
+
+  // Step 2: notify loading started
+  try { CrazyGames.SDK.game.loadingStart(); } catch(e) {}
+
+  // Step 3: boot animation
+  for (let i = 0; i < steps.length; i++) {
+    blog.textContent = steps[i];
+    bbar.style.width = ((i+1)/steps.length*100)+'%';
+    await new Promise(r => setTimeout(r, 210));
+  }
+
+  // Step 4: load save data
+  let saved = null;
+  try { saved = await CrazyGames.SDK.data.getItem('save'); } catch(e) {}
+  SAVE.load(saved);
+
+  // Step 5: done loading
+  try { CrazyGames.SDK.game.loadingStop(); } catch(e) {}
+
+  const bootEl = document.getElementById('boot');
+  bootEl.classList.add('out');
+  setTimeout(() => {
+    bootEl.style.display = 'none';
+    QB.showTitle();
+  }, 520);
+}
+
+// ── SITELOCK ──────────────────────────────────────────────────────
+(function() {
+  const allowed = ['localhost','127.0.0.1','crazygames.com',''];
+  const host = window.location.hostname;
+  if (!allowed.some(a => host === a || host.endsWith('.'+a))) {
+    document.body.style.filter = 'blur(12px) brightness(.4)';
+  }
+})();
+
+// ── PREVENT SCROLL ────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  if (['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code)) e.preventDefault();
+});
+
+// ── START ─────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', boot);
+</script>
+</body>
+</html>
